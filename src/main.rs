@@ -79,11 +79,12 @@ impl Particles {
         let mut temp_vel_x: Vec<f32> = Vec::new();
         let mut temp_vel_y: Vec<f32> = Vec::new();
         let mut temp_m: Vec<f32> = Vec::new();
-        for _ in 0..num {
-            temp_x.push(rng.random_range(256.0..768.0));
-            temp_y.push(rng.random_range(256.0..768.0));
-            temp_vel_x.push(rng.random_range(-0.5..0.5));
-            temp_vel_y.push(rng.random_range(-0.5..0.5));
+        let angular_velocity = 0.001;
+        for n in 0..num {
+            temp_x.push(rng.random_range((WIDTH as f32 / 4.0)..(WIDTH as f32 / 4.0 * 3.0)));
+            temp_y.push(rng.random_range((HEIGHT as f32 / 4.0)..(HEIGHT as f32 / 4.0 * 3.0)));
+            temp_vel_x.push((-temp_y[n] + WIDTH as f32 / 2.0) * angular_velocity);
+            temp_vel_y.push((temp_x[n] - HEIGHT as f32 / 2.0) * angular_velocity);
             temp_m.push(rng.random_range(0.0..5.0));
         }
         Particles {
@@ -191,7 +192,7 @@ fn main() {
 
     let mut particles = Particles::new(1000);
     let mut trail_grid = vec![vec![0; WIDTH]; HEIGHT];
-    let mut trail_lenght = 50;
+    let mut trail_lenght = 200;
 
     let mut view_off_x = 0;
     let mut view_off_y = 0;
@@ -207,19 +208,19 @@ fn main() {
                 Event::KeyDown {
                     keycode: Some(Keycode::Left),
                     ..
-                } => view_off_x += 5,
+                } => view_off_x += 10,
                 Event::KeyDown {
                     keycode: Some(Keycode::Right),
                     ..
-                } => view_off_x -= 5,
+                } => view_off_x -= 10,
                 Event::KeyDown {
                     keycode: Some(Keycode::Up),
                     ..
-                } => view_off_y += 5,
+                } => view_off_y += 10,
                 Event::KeyDown {
                     keycode: Some(Keycode::Down),
                     ..
-                } => view_off_y -= 5,
+                } => view_off_y -= 10,
                 Event::KeyDown {
                     keycode: Some(Keycode::KpPlus),
                     ..
