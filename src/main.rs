@@ -10,12 +10,12 @@ use sdl3::rect::Point;
 use sdl3::render::{Canvas, FPoint};
 use sdl3::video::Window;
 
-const PARTICLE_COUNT: usize = 5000;
+const PARTICLE_COUNT: usize = 10000;
 const WIDTH: usize = 1024;
 const HEIGHT: usize = 1024;
 const G: f32 = 0.01;
-const ANGULAR_VELOCITY: f32 = 0.002;
-const DISK_DENSITY_DISTRIBUTION: f32 = 0.7;
+const ANGULAR_VELOCITY: f32 = 0.01;
+const DISK_DENSITY_DISTRIBUTION: f32 = 1.3;
 
 fn draw_circle(render: &mut Canvas<Window>, pos_x: f32, pos_y: f32, radius: f32) {
     render.set_draw_color(Color::WHITE);
@@ -226,14 +226,16 @@ fn main() {
 
     let mut particles = Particles::new(PARTICLE_COUNT);
     let mut trail_grid = vec![vec![0; WIDTH]; HEIGHT];
-    let mut trail_lenght = 100;
+    let trail_lenght = 100;
 
     let mut view_off_x = 0;
     let mut view_off_y = 0;
 
     let mut run = false;
+    let mut update_intervall: u64 = 5;
 
     'running: loop {
+        let star_time = ::std::time::Instant::now();
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
@@ -248,7 +250,11 @@ fn main() {
                 Event::KeyDown {
                     keycode: Some(Keycode::Return),
                     ..
-                } => particles.restart(),
+                } => {
+                    particles.restart();
+                    view_off_x = 0;
+                    view_off_y = 0;
+                }
                 Event::KeyDown {
                     keycode: Some(Keycode::Left),
                     ..
@@ -268,11 +274,15 @@ fn main() {
                 Event::KeyDown {
                     keycode: Some(Keycode::KpPlus),
                     ..
-                } => trail_lenght += 5,
+                } => {
+                    if update_intervall >= 2 {
+                        update_intervall -= 1
+                    }
+                }
                 Event::KeyDown {
                     keycode: Some(Keycode::KpMinus),
                     ..
-                } => trail_lenght -= 5,
+                } => update_intervall += 1,
                 _ => {}
             }
         }
@@ -315,6 +325,10 @@ fn main() {
         if run {
             particles.update();
         }
-        // ::std::thread::sleep(Duration::from_millis(5));
+
+        let elapsed = ::std::time::Instant::now() - star_time;
+        if elapsed < Duration::from_millis(update_intervall) {
+            ::std::thread::sleep(Duration::from_millis(update_intervall) - elapsed);
+        }
     }
 }
