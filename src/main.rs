@@ -13,9 +13,9 @@ use sdl3::video::Window;
 const PARTICLE_COUNT: usize = 10000;
 const WIDTH: usize = 1024;
 const HEIGHT: usize = 1024;
-const G: f32 = 0.01;
-const ANGULAR_VELOCITY: f32 = 0.01;
-const DISK_DENSITY_DISTRIBUTION: f32 = 1.3;
+const G: f32 = 0.02;
+const ANGULAR_VELOCITY: f32 = 0.005;
+const DISK_DENSITY_DISTRIBUTION: f32 = 1.5;
 
 fn draw_circle(render: &mut Canvas<Window>, pos_x: f32, pos_y: f32, radius: f32) {
     render.set_draw_color(Color::WHITE);
@@ -311,7 +311,7 @@ fn main() {
                 &mut canvas,
                 particles.x[particle] + view_off_x as f32,
                 particles.y[particle] + view_off_y as f32,
-                radius + 1.0,
+                radius,
             );
             if (particles.x[particle] + view_off_x as f32) < WIDTH as f32
                 && (particles.y[particle] + view_off_y as f32) < HEIGHT as f32
