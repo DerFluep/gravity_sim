@@ -135,15 +135,11 @@ impl Particles {
                 let distance = (dir_x.powi(2) + dir_y.powi(2)).sqrt();
                 let radius = ((self.m[i] * 3.0) / (4.0 * PI)).cbrt();
                 if distance < radius {
-                    let new_x = if self.m[i] > self.m[j] {
-                        self.x[i]
-                    } else {
-                        self.x[j]
+                    if self.m[i] < self.m[j] {
+                        self.x[i] = self.x[j]
                     };
-                    let new_y = if self.m[i] > self.m[j] {
-                        self.y[i]
-                    } else {
-                        self.y[j]
+                    if self.m[i] < self.m[j] {
+                        self.y[i] = self.y[j]
                     };
                     let mid_vel_x = (self.m[i] * self.vel_x[i] + self.m[j] * self.vel_x[j])
                         / (self.m[i] + self.m[j]);
@@ -157,8 +153,6 @@ impl Particles {
                     self.vel_y.remove(j);
                     self.m.remove(j);
 
-                    self.x[i] = new_x;
-                    self.y[i] = new_y;
                     self.vel_x[i] = mid_vel_x;
                     self.vel_y[i] = mid_vel_y;
                     self.m[i] = new_mass;
