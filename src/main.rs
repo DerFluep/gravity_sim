@@ -5,11 +5,12 @@ use rand::prelude::*;
 use sdl3::event::Event;
 use sdl3::keyboard::Keycode;
 use sdl3::pixels::Color;
+use sdl3::rect::Point;
 use sdl3::render::{Canvas, FPoint};
 use sdl3::video::Window;
 
-const WIDTH: u32 = 1024;
-const HEIGHT: u32 = 1024;
+const WIDTH: usize = 1024;
+const HEIGHT: usize = 1024;
 const G: f32 = 0.01;
 
 fn draw_circle(render: &mut Canvas<Window>, pos_x: f32, pos_y: f32, radius: f32) {
@@ -172,7 +173,7 @@ fn main() {
     let video_subsystem = sdl_context.video().unwrap();
 
     let window = video_subsystem
-        .window("Gravity Particle Sim", WIDTH, HEIGHT)
+        .window("Gravity Particle Sim", WIDTH as u32, HEIGHT as u32)
         .position_centered()
         .build()
         .unwrap();
@@ -181,6 +182,7 @@ fn main() {
     let mut event_pump = sdl_context.event_pump().unwrap();
 
     let mut particles = Particles::new(1000);
+    let mut trail_grid = vec![vec![0; WIDTH]; HEIGHT];
 
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -197,6 +199,16 @@ fn main() {
         canvas.set_draw_color(Color::BLACK);
         canvas.clear();
 
+        canvas.set_draw_color(Color::RGB(128, 0, 0));
+        for (ny, y) in trail_grid.iter_mut().enumerate() {
+            for (nx, x) in y.iter_mut().enumerate() {
+                if *x >= 1 {
+                    canvas.draw_point(Point::new(nx as i32, ny as i32)).unwrap();
+                }
+                *x -= 1;
+            }
+        }
+
         canvas.set_draw_color(Color::WHITE);
         for particle in 0..particles.x.len() {
             let radius = ((particles.m[particle] * 3.0) / (4.0 * PI)).cbrt();
@@ -206,10 +218,13 @@ fn main() {
                 particles.y[particle],
                 radius + 1.0,
             );
+            if particles.x[particle] <= WIDTH as f32 && particles.y[particle] <= HEIGHT as f32 {
+                trail_grid[particles.y[particle] as usize][particles.x[particle] as usize] = 50;
+            }
         }
 
         canvas.present();
         particles.update();
-        ::std::thread::sleep(Duration::from_millis(16));
+        // ::std::thread::sleep(Duration::from_millis(16));
     }
 }
