@@ -106,8 +106,16 @@ impl Particles {
                 let distance = (dir_x.powi(2) + dir_y.powi(2)).sqrt();
                 let radius = ((self.m[i] * 3.0) / (4.0 * PI)).cbrt();
                 if distance < radius {
-                    let mid_x = (self.x[i] + self.x[j]) / 2.0;
-                    let mid_y = (self.y[i] + self.y[j]) / 2.0;
+                    let new_x = if self.m[i] > self.m[j] {
+                        self.x[i]
+                    } else {
+                        self.x[j]
+                    };
+                    let new_y = if self.m[i] > self.m[j] {
+                        self.y[i]
+                    } else {
+                        self.y[j]
+                    };
                     let mid_vel_x = (self.m[i] * self.vel_x[i] + self.m[j] * self.vel_x[j])
                         / (self.m[i] + self.m[j]);
                     let mid_vel_y = (self.m[i] * self.vel_y[i] + self.m[j] * self.vel_y[j])
@@ -120,8 +128,8 @@ impl Particles {
                     self.vel_y.remove(j);
                     self.m.remove(j);
 
-                    self.x[i] = mid_x;
-                    self.y[i] = mid_y;
+                    self.x[i] = new_x;
+                    self.y[i] = new_y;
                     self.vel_x[i] = mid_vel_x;
                     self.vel_y[i] = mid_vel_y;
                     self.m[i] = new_mass;
@@ -218,7 +226,7 @@ fn main() {
                 particles.y[particle],
                 radius + 1.0,
             );
-            if particles.x[particle] <= WIDTH as f32 && particles.y[particle] <= HEIGHT as f32 {
+            if particles.x[particle] < WIDTH as f32 && particles.y[particle] < HEIGHT as f32 {
                 trail_grid[particles.y[particle] as usize][particles.x[particle] as usize] = 50;
             }
         }
