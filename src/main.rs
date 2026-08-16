@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use std::f32::consts::{PI, TAU};
 use std::time::Duration;
 
@@ -9,6 +10,7 @@ use sdl3::rect::Point;
 use sdl3::render::{Canvas, FPoint};
 use sdl3::video::Window;
 
+const PARTICLE_COUNT: usize = 5000;
 const WIDTH: usize = 1024;
 const HEIGHT: usize = 1024;
 const G: f32 = 0.01;
@@ -16,6 +18,11 @@ const ANGULAR_VELOCITY: f32 = 0.002;
 const DISK_DENSITY_DISTRIBUTION: f32 = 0.7;
 
 fn draw_circle(render: &mut Canvas<Window>, pos_x: f32, pos_y: f32, radius: f32) {
+    render.set_draw_color(Color::WHITE);
+    if radius <= 2.0 {
+        render.draw_point(FPoint::new(pos_x, pos_y)).unwrap();
+        return;
+    }
     let diameter = radius * 2.0;
 
     let mut x = radius - 1.0;
@@ -24,7 +31,6 @@ fn draw_circle(render: &mut Canvas<Window>, pos_x: f32, pos_y: f32, radius: f32)
     let mut ty = 1.0;
     let mut error = tx - diameter;
 
-    render.set_draw_color(Color::WHITE);
     while x >= y {
         render
             .draw_point(FPoint::new(pos_x + x, pos_y - y))
@@ -125,6 +131,7 @@ impl Particles {
     }
 
     pub fn update(&mut self) {
+        // collision detection and merging
         let mut i = 0;
         while i < self.x.len() {
             let mut merged = false;
@@ -136,10 +143,8 @@ impl Particles {
                 let radius = ((self.m[i] * 3.0) / (4.0 * PI)).cbrt();
                 if distance < radius {
                     if self.m[i] < self.m[j] {
-                        self.x[i] = self.x[j]
-                    };
-                    if self.m[i] < self.m[j] {
-                        self.y[i] = self.y[j]
+                        self.x[i] = self.x[j];
+                        self.y[i] = self.y[j];
                     };
                     let mid_vel_x = (self.m[i] * self.vel_x[i] + self.m[j] * self.vel_x[j])
                         / (self.m[i] + self.m[j]);
@@ -168,34 +173,41 @@ impl Particles {
             }
         }
 
-        let mut temp_x = self.x.to_vec();
-        let mut temp_y = self.y.to_vec();
-
-        for current in 0..self.x.len() {
-            let mut vel_x = self.vel_x[current];
-            let mut vel_y = self.vel_y[current];
-
-            for n in 0..self.x.len() {
-                if n == current {
-                    continue;
+        // Position updating
+        let len = self.x.len();
+        let results: Vec<(f32, f32, f32, f32)> = (0..len)
+            .into_par_iter()
+            .map(|current| {
+                let mut vel_x = self.vel_x[current];
+                let mut vel_y = self.vel_y[current];
+                for n in 0..len {
+                    if n == current {
+                        continue;
+                    }
+                    let mut dir_x = self.x[n] - self.x[current];
+                    let mut dir_y = self.y[n] - self.y[current];
+                    let distance = (dir_x.powi(2) + dir_y.powi(2)).sqrt();
+                    dir_x /= distance;
+                    dir_y /= distance;
+                    let force = G * (self.m[current] * self.m[n]) / distance.powi(2);
+                    let acceleration = force / self.m[current];
+                    vel_x += dir_x * acceleration;
+                    vel_y += dir_y * acceleration;
                 }
-                let mut dir_x = self.x[n] - self.x[current];
-                let mut dir_y = self.y[n] - self.y[current];
-                let distance = (dir_x.powi(2) + dir_y.powi(2)).sqrt();
-                dir_x /= distance;
-                dir_y /= distance;
-                let force = G * (self.m[current] * self.m[n]) / distance.powi(2);
-                let acceleration = force / self.m[current];
-                vel_x += dir_x * acceleration;
-                vel_y += dir_y * acceleration;
-            }
-            temp_x[current] += vel_x;
-            temp_y[current] += vel_y;
-            self.vel_x[current] = vel_x;
-            self.vel_y[current] = vel_y;
+
+                let new_x = self.x[current] + vel_x;
+                let new_y = self.y[current] + vel_y;
+
+                (new_x, new_y, vel_x, vel_y)
+            })
+            .collect();
+
+        for (i, (nx, ny, nvx, nvy)) in results.into_iter().enumerate() {
+            self.x[i] = nx;
+            self.y[i] = ny;
+            self.vel_x[i] = nvx;
+            self.vel_y[i] = nvy;
         }
-        self.x = temp_x.to_vec();
-        self.y = temp_y.to_vec();
     }
 }
 
@@ -212,7 +224,7 @@ fn main() {
     let mut canvas = window.into_canvas();
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    let mut particles = Particles::new(5000);
+    let mut particles = Particles::new(PARTICLE_COUNT);
     let mut trail_grid = vec![vec![0; WIDTH]; HEIGHT];
     let mut trail_lenght = 100;
 
@@ -303,6 +315,6 @@ fn main() {
         if run {
             particles.update();
         }
-        ::std::thread::sleep(Duration::from_millis(5));
+        // ::std::thread::sleep(Duration::from_millis(5));
     }
 }
