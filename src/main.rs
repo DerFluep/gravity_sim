@@ -1,4 +1,4 @@
-use std::f32::consts::PI;
+use std::f32::consts::{PI, TAU};
 use std::time::Duration;
 
 use rand::prelude::*;
@@ -12,6 +12,8 @@ use sdl3::video::Window;
 const WIDTH: usize = 1024;
 const HEIGHT: usize = 1024;
 const G: f32 = 0.01;
+const ANGULAR_VELOCITY: f32 = 0.002;
+const DISK_DENSITY_DISTRIBUTION: f32 = 0.7;
 
 fn draw_circle(render: &mut Canvas<Window>, pos_x: f32, pos_y: f32, radius: f32) {
     let diameter = radius * 2.0;
@@ -64,6 +66,7 @@ fn draw_circle(render: &mut Canvas<Window>, pos_x: f32, pos_y: f32, radius: f32)
 }
 
 struct Particles {
+    num: usize,
     x: Vec<f32>,
     y: Vec<f32>,
     vel_x: Vec<f32>,
@@ -79,21 +82,46 @@ impl Particles {
         let mut temp_vel_x: Vec<f32> = Vec::new();
         let mut temp_vel_y: Vec<f32> = Vec::new();
         let mut temp_m: Vec<f32> = Vec::new();
-        let angular_velocity = 0.001;
         for n in 0..num {
-            temp_x.push(rng.random_range((WIDTH as f32 / 4.0)..(WIDTH as f32 / 4.0 * 3.0)));
-            temp_y.push(rng.random_range((HEIGHT as f32 / 4.0)..(HEIGHT as f32 / 4.0 * 3.0)));
-            temp_vel_x.push((-temp_y[n] + WIDTH as f32 / 2.0) * angular_velocity);
-            temp_vel_y.push((temp_x[n] - HEIGHT as f32 / 2.0) * angular_velocity);
-            temp_m.push(rng.random_range(0.0..5.0));
+            let r = HEIGHT as f32 / 4.0 * rng.random::<f32>().powf(DISK_DENSITY_DISTRIBUTION);
+            let theta = rng.random_range(0.0..TAU);
+            temp_x.push(WIDTH as f32 / 2.0 + r * theta.cos());
+            temp_y.push(HEIGHT as f32 / 2.0 + r * theta.sin());
+            temp_vel_x.push((-temp_y[n] + WIDTH as f32 / 2.0) * ANGULAR_VELOCITY);
+            temp_vel_y.push((temp_x[n] - HEIGHT as f32 / 2.0) * ANGULAR_VELOCITY);
+            temp_m.push(rng.random_range(1.0..2.0));
         }
         Particles {
+            num,
             x: temp_x,
             y: temp_y,
             vel_x: temp_vel_x,
             vel_y: temp_vel_y,
             m: temp_m,
         }
+    }
+
+    pub fn restart(&mut self) {
+        let mut rng = rand::rng();
+        let mut temp_x = Vec::new();
+        let mut temp_y = Vec::new();
+        let mut temp_vel_x: Vec<f32> = Vec::new();
+        let mut temp_vel_y: Vec<f32> = Vec::new();
+        let mut temp_m: Vec<f32> = Vec::new();
+        for n in 0..self.num {
+            let r = HEIGHT as f32 / 4.0 * rng.random::<f32>().powf(DISK_DENSITY_DISTRIBUTION);
+            let theta = rng.random_range(0.0..TAU);
+            temp_x.push(WIDTH as f32 / 2.0 + r * theta.cos());
+            temp_y.push(HEIGHT as f32 / 2.0 + r * theta.sin());
+            temp_vel_x.push((-temp_y[n] + WIDTH as f32 / 2.0) * ANGULAR_VELOCITY);
+            temp_vel_y.push((temp_x[n] - HEIGHT as f32 / 2.0) * ANGULAR_VELOCITY);
+            temp_m.push(rng.random_range(1.0..2.0));
+        }
+        self.x = temp_x;
+        self.y = temp_y;
+        self.vel_x = temp_vel_x;
+        self.vel_y = temp_vel_y;
+        self.m = temp_m;
     }
 
     pub fn update(&mut self) {
@@ -190,12 +218,14 @@ fn main() {
     let mut canvas = window.into_canvas();
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    let mut particles = Particles::new(1000);
+    let mut particles = Particles::new(5000);
     let mut trail_grid = vec![vec![0; WIDTH]; HEIGHT];
-    let mut trail_lenght = 200;
+    let mut trail_lenght = 100;
 
     let mut view_off_x = 0;
     let mut view_off_y = 0;
+
+    let mut run = false;
 
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -205,6 +235,14 @@ fn main() {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => break 'running,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Space),
+                    ..
+                } => run = !run,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Return),
+                    ..
+                } => particles.restart(),
                 Event::KeyDown {
                     keycode: Some(Keycode::Left),
                     ..
@@ -243,7 +281,9 @@ fn main() {
                 if *x >= 1 {
                     canvas.draw_point(Point::new(nx as i32, ny as i32)).unwrap();
                 }
-                *x -= 1;
+                if run {
+                    *x -= 1;
+                }
             }
         }
 
@@ -266,7 +306,9 @@ fn main() {
         }
 
         canvas.present();
-        particles.update();
-        // ::std::thread::sleep(Duration::from_millis(16));
+        if run {
+            particles.update();
+        }
+        ::std::thread::sleep(Duration::from_millis(5));
     }
 }
