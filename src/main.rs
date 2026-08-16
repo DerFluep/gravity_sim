@@ -191,6 +191,10 @@ fn main() {
 
     let mut particles = Particles::new(1000);
     let mut trail_grid = vec![vec![0; WIDTH]; HEIGHT];
+    let mut trail_lenght = 50;
+
+    let mut view_off_x = 0;
+    let mut view_off_y = 0;
 
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -200,6 +204,30 @@ fn main() {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => break 'running,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Left),
+                    ..
+                } => view_off_x += 5,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Right),
+                    ..
+                } => view_off_x -= 5,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Up),
+                    ..
+                } => view_off_y += 5,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Down),
+                    ..
+                } => view_off_y -= 5,
+                Event::KeyDown {
+                    keycode: Some(Keycode::KpPlus),
+                    ..
+                } => trail_lenght += 5,
+                Event::KeyDown {
+                    keycode: Some(Keycode::KpMinus),
+                    ..
+                } => trail_lenght -= 5,
                 _ => {}
             }
         }
@@ -207,6 +235,7 @@ fn main() {
         canvas.set_draw_color(Color::BLACK);
         canvas.clear();
 
+        // Draw particle Trails
         canvas.set_draw_color(Color::RGB(128, 0, 0));
         for (ny, y) in trail_grid.iter_mut().enumerate() {
             for (nx, x) in y.iter_mut().enumerate() {
@@ -217,17 +246,21 @@ fn main() {
             }
         }
 
+        // Draw Particles
         canvas.set_draw_color(Color::WHITE);
         for particle in 0..particles.x.len() {
             let radius = ((particles.m[particle] * 3.0) / (4.0 * PI)).cbrt();
             draw_circle(
                 &mut canvas,
-                particles.x[particle],
-                particles.y[particle],
+                particles.x[particle] + view_off_x as f32,
+                particles.y[particle] + view_off_y as f32,
                 radius + 1.0,
             );
-            if particles.x[particle] < WIDTH as f32 && particles.y[particle] < HEIGHT as f32 {
-                trail_grid[particles.y[particle] as usize][particles.x[particle] as usize] = 50;
+            if (particles.x[particle] + view_off_x as f32) < WIDTH as f32
+                && (particles.y[particle] + view_off_y as f32) < HEIGHT as f32
+            {
+                trail_grid[(particles.y[particle] + view_off_y as f32) as usize]
+                    [(particles.x[particle] + view_off_x as f32) as usize] = trail_lenght;
             }
         }
 
