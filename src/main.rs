@@ -3,7 +3,7 @@ use macroquad::prelude::*;
 use rayon::prelude::*;
 use std::f32::consts::{PI, TAU};
 
-const PARTICLE_COUNT: usize = 10000;
+const PARTICLE_COUNT: usize = 20000;
 const DISK_SIZE: f32 = 512.0;
 const G: f32 = 0.005;
 const ANGULAR_VELOCITY: f32 = 0.002;
@@ -97,8 +97,9 @@ impl Particles {
                 let dir_x = self.x[i] - self.x[j];
                 let dir_y = self.y[i] - self.y[j];
                 let distance = (dir_x.powi(2) + dir_y.powi(2)).sqrt();
-                let radius = ((self.m[i] * 3.0) / (4.0 * PI)).cbrt();
-                if distance < radius {
+                let radius_i = ((self.m[i] * 3.0) / (4.0 * PI)).cbrt();
+                let radius_j = ((self.m[j] * 3.0) / (4.0 * PI)).cbrt();
+                if distance < radius_i + radius_j {
                     if self.m[i] < self.m[j] {
                         self.x[i] = self.x[j];
                         self.y[i] = self.y[j];
