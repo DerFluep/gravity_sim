@@ -159,7 +159,7 @@ async fn main() {
     let mut run = false;
 
     'running: loop {
-        if is_key_pressed(KeyCode::Escape) {
+        if is_key_pressed(KeyCode::Escape) || is_key_pressed(KeyCode::Q) {
             break 'running;
         }
         if is_key_pressed(KeyCode::Space) {
