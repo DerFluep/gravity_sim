@@ -5,9 +5,12 @@ use std::f32::consts::{PI, TAU};
 
 const PARTICLE_COUNT: usize = 5000;
 const DISK_SIZE: f32 = 256.0;
-const G: f32 = 0.02;
+const G: f32 = 0.005;
 const ANGULAR_VELOCITY: f32 = 0.005;
-const DISK_DENSITY_DISTRIBUTION: f32 = 1.5;
+const ANGULAR_VELOCITY_FALLOFF: f32 = 0.1;
+const DISK_DENSITY_DISTRIBUTION: f32 = 0.8;
+const MIN_MASS: f32 = 5.0;
+const MAX_MASS: f32 = 12.0;
 
 struct Particles {
     num: usize,
@@ -31,9 +34,18 @@ impl Particles {
             let theta = rng.random_range(0.0..TAU);
             temp_x.push(r * theta.cos());
             temp_y.push(r * theta.sin());
-            temp_vel_x.push(-temp_y[n] * ANGULAR_VELOCITY);
-            temp_vel_y.push(temp_x[n] * ANGULAR_VELOCITY);
-            temp_m.push(rng.random_range(1.0..2.0));
+            let distance = (temp_x[n].powi(2) + temp_y[n].powi(2)).sqrt();
+            temp_vel_x.push(
+                -temp_y[n]
+                    * (distance / DISK_SIZE).powf(ANGULAR_VELOCITY_FALLOFF)
+                    * ANGULAR_VELOCITY,
+            );
+            temp_vel_y.push(
+                temp_x[n]
+                    * (distance / DISK_SIZE).powf(ANGULAR_VELOCITY_FALLOFF)
+                    * ANGULAR_VELOCITY,
+            );
+            temp_m.push(rng.random_range(MIN_MASS..MAX_MASS));
         }
         Particles {
             num,
@@ -57,9 +69,18 @@ impl Particles {
             let theta = rng.random_range(0.0..TAU);
             temp_x.push(r * theta.cos());
             temp_y.push(r * theta.sin());
-            temp_vel_x.push(-temp_y[n] * ANGULAR_VELOCITY);
-            temp_vel_y.push(temp_x[n] * ANGULAR_VELOCITY);
-            temp_m.push(rng.random_range(1.0..2.0));
+            let distance = (temp_x[n].powi(2) + temp_y[n].powi(2)).sqrt();
+            temp_vel_x.push(
+                -temp_y[n]
+                    * (distance / DISK_SIZE).powf(ANGULAR_VELOCITY_FALLOFF)
+                    * ANGULAR_VELOCITY,
+            );
+            temp_vel_y.push(
+                temp_x[n]
+                    * (distance / DISK_SIZE).powf(ANGULAR_VELOCITY_FALLOFF)
+                    * ANGULAR_VELOCITY,
+            );
+            temp_m.push(rng.random_range(MIN_MASS..MAX_MASS));
         }
         self.x = temp_x;
         self.y = temp_y;
@@ -166,6 +187,8 @@ async fn main() {
             run = !run;
         }
         if is_key_pressed(KeyCode::Enter) {
+            view_off_x = 0.0;
+            view_off_y = 0.0;
             particles.restart();
         }
         if is_key_down(KeyCode::Up) {
