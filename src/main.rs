@@ -3,11 +3,11 @@ use macroquad::prelude::*;
 use rayon::prelude::*;
 use std::f32::consts::{PI, TAU};
 
-const PARTICLE_COUNT: usize = 5000;
-const DISK_SIZE: f32 = 256.0;
+const PARTICLE_COUNT: usize = 10000;
+const DISK_SIZE: f32 = 512.0;
 const G: f32 = 0.005;
-const ANGULAR_VELOCITY: f32 = 0.005;
-const ANGULAR_VELOCITY_FALLOFF: f32 = 0.1;
+const ANGULAR_VELOCITY: f32 = 0.002;
+const ANGULAR_VELOCITY_FALLOFF: f32 = 0.5;
 const DISK_DENSITY_DISTRIBUTION: f32 = 0.8;
 const MIN_MASS: f32 = 5.0;
 const MAX_MASS: f32 = 12.0;
@@ -36,13 +36,11 @@ impl Particles {
             temp_y.push(r * theta.sin());
             let distance = (temp_x[n].powi(2) + temp_y[n].powi(2)).sqrt();
             temp_vel_x.push(
-                -temp_y[n]
-                    * (distance / DISK_SIZE).powf(ANGULAR_VELOCITY_FALLOFF)
+                -temp_y[n] / (distance / DISK_SIZE).powf(ANGULAR_VELOCITY_FALLOFF)
                     * ANGULAR_VELOCITY,
             );
             temp_vel_y.push(
-                temp_x[n]
-                    * (distance / DISK_SIZE).powf(ANGULAR_VELOCITY_FALLOFF)
+                temp_x[n] / (distance / DISK_SIZE).powf(ANGULAR_VELOCITY_FALLOFF)
                     * ANGULAR_VELOCITY,
             );
             temp_m.push(rng.random_range(MIN_MASS..MAX_MASS));
