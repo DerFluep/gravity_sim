@@ -1,4 +1,5 @@
 use ::rand::prelude::*;
+use core::f32;
 use macroquad::prelude::*;
 use rayon::prelude::*;
 use std::f32::consts::{PI, TAU};
@@ -11,6 +12,78 @@ const ANGULAR_VELOCITY_FALLOFF: f32 = 0.5;
 const DISK_DENSITY_DISTRIBUTION: f32 = 0.8;
 const MIN_MASS: f32 = 5.0;
 const MAX_MASS: f32 = 12.0;
+
+struct Point {
+    x: f64,
+    y: f64,
+}
+
+struct Square {
+    min: Point,
+    max: Point,
+}
+
+impl Square {
+    pub fn bounding_box(points: Vec<Point>) -> Square {
+        let mut min_x = f64::MAX;
+        let mut max_x = -f64::MAX;
+        let mut min_y = f64::MAX;
+        let mut max_y = -f64::MAX;
+
+        points.iter().for_each(|point| {
+            if point.x < min_x {
+                min_x = point.x;
+            } else if point.x > max_x {
+                max_x = point.x;
+            }
+            if point.y < min_y {
+                min_y = point.y;
+            } else if point.y > max_y {
+                max_y = point.y;
+            }
+        });
+
+        let delta_x = max_x - min_x;
+        let delta_y = max_y - min_y;
+        let mid_x = delta_x / 2.0 + min_x;
+        let mid_y = delta_y / 2.0 + min_y;
+        let max_length = if delta_x > delta_y { delta_x } else { delta_y };
+
+        Square {
+            min: Point {
+                x: mid_x - max_length / 2.0,
+                y: mid_y - max_length / 2.0,
+            },
+            max: Point {
+                x: mid_x + max_length / 2.0,
+                y: mid_y + max_length / 2.0,
+            },
+        }
+    }
+}
+
+enum NodeType {
+    Empty,
+    Leaf(usize),
+    Internal([usize; 4]),
+}
+
+struct Node {
+    bounds: Square,
+    mass: f64,
+    center_of_mass: Point,
+    kind: NodeType,
+}
+
+struct Quadtree {
+    nodes: Vec<Node>,
+}
+
+impl Quadtree {
+    pub fn insert_node(&mut self) {}
+}
+
+//_______________________________________________________________
 
 struct Particles {
     num: usize,
@@ -88,48 +161,50 @@ impl Particles {
     }
 
     pub fn update(&mut self) {
-        // collision detection and merging
-        let mut i = 0;
-        while i < self.x.len() {
-            let mut merged = false;
-            let mut j = i + 1;
-            while j < self.x.len() {
-                let dir_x = self.x[i] - self.x[j];
-                let dir_y = self.y[i] - self.y[j];
-                let distance = (dir_x.powi(2) + dir_y.powi(2)).sqrt();
-                let radius_i = ((self.m[i] * 3.0) / (4.0 * PI)).cbrt();
-                let radius_j = ((self.m[j] * 3.0) / (4.0 * PI)).cbrt();
-                if distance < radius_i + radius_j {
-                    if self.m[i] < self.m[j] {
-                        self.x[i] = self.x[j];
-                        self.y[i] = self.y[j];
-                    };
-                    let mid_vel_x = (self.m[i] * self.vel_x[i] + self.m[j] * self.vel_x[j])
-                        / (self.m[i] + self.m[j]);
-                    let mid_vel_y = (self.m[i] * self.vel_y[i] + self.m[j] * self.vel_y[j])
-                        / (self.m[i] + self.m[j]);
-                    let new_mass = self.m[i] + self.m[j];
+        /*
+                // collision detection and merging
+                let mut i = 0;
+                while i < self.x.len() {
+                    let mut merged = false;
+                    let mut j = i + 1;
+                    while j < self.x.len() {
+                        let dir_x = self.x[i] - self.x[j];
+                        let dir_y = self.y[i] - self.y[j];
+                        let distance = (dir_x.powi(2) + dir_y.powi(2)).sqrt();
+                        let radius_i = ((self.m[i] * 3.0) / (4.0 * PI)).cbrt();
+                        let radius_j = ((self.m[j] * 3.0) / (4.0 * PI)).cbrt();
+                        if distance < radius_i + radius_j {
+                            if self.m[i] < self.m[j] {
+                                self.x[i] = self.x[j];
+                                self.y[i] = self.y[j];
+                            };
+                            let mid_vel_x = (self.m[i] * self.vel_x[i] + self.m[j] * self.vel_x[j])
+                                / (self.m[i] + self.m[j]);
+                            let mid_vel_y = (self.m[i] * self.vel_y[i] + self.m[j] * self.vel_y[j])
+                                / (self.m[i] + self.m[j]);
+                            let new_mass = self.m[i] + self.m[j];
 
-                    self.x.remove(j);
-                    self.y.remove(j);
-                    self.vel_x.remove(j);
-                    self.vel_y.remove(j);
-                    self.m.remove(j);
+                            self.x.remove(j);
+                            self.y.remove(j);
+                            self.vel_x.remove(j);
+                            self.vel_y.remove(j);
+                            self.m.remove(j);
 
-                    self.vel_x[i] = mid_vel_x;
-                    self.vel_y[i] = mid_vel_y;
-                    self.m[i] = new_mass;
+                            self.vel_x[i] = mid_vel_x;
+                            self.vel_y[i] = mid_vel_y;
+                            self.m[i] = new_mass;
 
-                    merged = true;
-                    break;
-                } else {
-                    j += 1;
+                            merged = true;
+                            break;
+                        } else {
+                            j += 1;
+                        }
+                    }
+                    if !merged {
+                        i += 1;
+                    }
                 }
-            }
-            if !merged {
-                i += 1;
-            }
-        }
+        */
 
         // Position updating
         let len = self.x.len();
@@ -144,7 +219,10 @@ impl Particles {
                     }
                     let mut dir_x = self.x[n] - self.x[current];
                     let mut dir_y = self.y[n] - self.y[current];
-                    let distance = (dir_x.powi(2) + dir_y.powi(2)).sqrt();
+                    let mut distance = (dir_x.powi(2) + dir_y.powi(2)).sqrt();
+                    if distance < 5.0 {
+                        distance = 5.0;
+                    }
                     dir_x /= distance;
                     dir_y /= distance;
                     let force = G * (self.m[current] * self.m[n]) / distance.powi(2);
@@ -209,11 +287,11 @@ async fn main() {
         let screen_width = screen_width();
         let screen_height = screen_height();
         for particle in 0..particles.x.len() {
-            let radius = ((particles.m[particle] * 3.0) / (4.0 * PI)).cbrt();
+            // let radius = ((particles.m[particle] * 3.0) / (4.0 * PI)).cbrt();
             draw_circle(
                 particles.x[particle] + screen_width / 2.0 + view_off_x,
                 particles.y[particle] + screen_height / 2.0 + view_off_y,
-                radius,
+                1.0,
                 WHITE,
             );
         }
