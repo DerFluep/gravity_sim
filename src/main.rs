@@ -1,8 +1,16 @@
+#![allow(dead_code)]
+
+mod square;
+mod vec2;
+
+use crate::square::Square;
+use crate::vec2::Vec2;
+use macroquad::prelude::*;
+
 use ::rand::prelude::*;
 use core::f32;
-use macroquad::prelude::*;
 use rayon::prelude::*;
-use std::f32::consts::{PI, TAU};
+use std::f32::consts::TAU;
 
 const PARTICLE_COUNT: usize = 20000;
 const DISK_SIZE: f32 = 512.0;
@@ -12,54 +20,12 @@ const ANGULAR_VELOCITY_FALLOFF: f32 = 0.5;
 const DISK_DENSITY_DISTRIBUTION: f32 = 0.8;
 const MIN_MASS: f32 = 5.0;
 const MAX_MASS: f32 = 12.0;
+const MASS: f64 = 1.0;
 
-struct Point {
-    x: f64,
-    y: f64,
-}
-
-struct Square {
-    min: Point,
-    max: Point,
-}
-
-impl Square {
-    pub fn bounding_box(points: Vec<Point>) -> Square {
-        let mut min_x = f64::MAX;
-        let mut max_x = -f64::MAX;
-        let mut min_y = f64::MAX;
-        let mut max_y = -f64::MAX;
-
-        points.iter().for_each(|point| {
-            if point.x < min_x {
-                min_x = point.x;
-            } else if point.x > max_x {
-                max_x = point.x;
-            }
-            if point.y < min_y {
-                min_y = point.y;
-            } else if point.y > max_y {
-                max_y = point.y;
-            }
-        });
-
-        let delta_x = max_x - min_x;
-        let delta_y = max_y - min_y;
-        let mid_x = delta_x / 2.0 + min_x;
-        let mid_y = delta_y / 2.0 + min_y;
-        let max_length = if delta_x > delta_y { delta_x } else { delta_y };
-
-        Square {
-            min: Point {
-                x: mid_x - max_length / 2.0,
-                y: mid_y - max_length / 2.0,
-            },
-            max: Point {
-                x: mid_x + max_length / 2.0,
-                y: mid_y + max_length / 2.0,
-            },
-        }
-    }
+pub struct Particle {
+    pub position: Vec2,
+    pub velocity: Vec2,
+    pub mass: f64,
 }
 
 enum NodeType {
@@ -71,7 +37,7 @@ enum NodeType {
 struct Node {
     bounds: Square,
     mass: f64,
-    center_of_mass: Point,
+    center_of_mass: Vec2,
     kind: NodeType,
 }
 
@@ -80,7 +46,47 @@ struct Quadtree {
 }
 
 impl Quadtree {
-    pub fn insert_node(&mut self) {}
+    pub fn create(particles: &Vec<Particle>) -> Self {
+        let bounds = Square::bounding_box(&particles);
+        let bounds_size = bounds.size();
+        let root = Node {
+            bounds,
+            mass: 0.0,
+            center_of_mass: Vec2::new(bounds_size / 2.0, bounds_size / 2.0),
+            kind: NodeType::Empty,
+        };
+
+        let mut tree = Quadtree { nodes: vec![root] };
+
+        let root_index = 0;
+
+        for (n, _) in particles.iter().enumerate() {
+            tree.insert(root_index, n, &particles);
+        }
+
+        tree
+    }
+
+    pub fn insert(&mut self, node_index: usize, particle_index: usize, particles: &[Particle]) {
+        match self.nodes[node_index].kind {
+            NodeType::Empty => {
+                self.nodes[node_index].mass = particles[particle_index].mass;
+                self.nodes[node_index].center_of_mass = particles[particle_index].position;
+                self.nodes[node_index].kind = NodeType::Leaf(particle_index);
+            }
+            NodeType::Leaf(_) => {
+                let bounds = self.nodes[node_index].bounds;
+
+                // TODO: add the three remaining squares
+                let nw = Square::new(
+                    self.nodes[node_index].bounds.min(),
+                    self.nodes[node_index].bounds.size() / 2.0,
+                );
+            }
+            // TODO: implement match arm for Internal
+            NodeType::Internal(_) => {}
+        }
+    }
 }
 
 //_______________________________________________________________
