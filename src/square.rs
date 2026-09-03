@@ -1,4 +1,4 @@
-use crate::Particle;
+use crate::particle::Particle;
 use crate::vec2::Vec2;
 
 #[derive(Clone, Copy)]

@@ -1,96 +1,29 @@
 #![allow(dead_code)]
 
+mod particle;
+mod quadtree;
 mod square;
 mod vec2;
 
-use crate::square::Square;
-use crate::vec2::Vec2;
+use crate::particle::create_particles;
+use crate::quadtree::Quadtree;
 use macroquad::prelude::*;
 
-use ::rand::prelude::*;
 use core::f32;
-use rayon::prelude::*;
-use std::f32::consts::TAU;
 
-const PARTICLE_COUNT: usize = 20000;
-const DISK_SIZE: f32 = 512.0;
-const G: f32 = 0.005;
-const ANGULAR_VELOCITY: f32 = 0.002;
-const ANGULAR_VELOCITY_FALLOFF: f32 = 0.5;
-const DISK_DENSITY_DISTRIBUTION: f32 = 0.8;
-const MIN_MASS: f32 = 5.0;
-const MAX_MASS: f32 = 12.0;
+const PARTICLE_COUNT: usize = 100000;
+const DISK_SIZE: f64 = 512.0;
+const G: f64 = 0.005;
+const ANGULAR_VELOCITY: f64 = 0.002;
+const ANGULAR_VELOCITY_FALLOFF: f64 = 0.5;
+const DISK_DENSITY_DISTRIBUTION: f64 = 0.8;
+const MIN_MASS: f64 = 5.0;
+const MAX_MASS: f64 = 12.0;
 const MASS: f64 = 1.0;
-
-pub struct Particle {
-    pub position: Vec2,
-    pub velocity: Vec2,
-    pub mass: f64,
-}
-
-enum NodeType {
-    Empty,
-    Leaf(usize),
-    Internal([usize; 4]),
-}
-
-struct Node {
-    bounds: Square,
-    mass: f64,
-    center_of_mass: Vec2,
-    kind: NodeType,
-}
-
-struct Quadtree {
-    nodes: Vec<Node>,
-}
-
-impl Quadtree {
-    pub fn create(particles: &Vec<Particle>) -> Self {
-        let bounds = Square::bounding_box(&particles);
-        let bounds_size = bounds.size();
-        let root = Node {
-            bounds,
-            mass: 0.0,
-            center_of_mass: Vec2::new(bounds_size / 2.0, bounds_size / 2.0),
-            kind: NodeType::Empty,
-        };
-
-        let mut tree = Quadtree { nodes: vec![root] };
-
-        let root_index = 0;
-
-        for (n, _) in particles.iter().enumerate() {
-            tree.insert(root_index, n, &particles);
-        }
-
-        tree
-    }
-
-    pub fn insert(&mut self, node_index: usize, particle_index: usize, particles: &[Particle]) {
-        match self.nodes[node_index].kind {
-            NodeType::Empty => {
-                self.nodes[node_index].mass = particles[particle_index].mass;
-                self.nodes[node_index].center_of_mass = particles[particle_index].position;
-                self.nodes[node_index].kind = NodeType::Leaf(particle_index);
-            }
-            NodeType::Leaf(_) => {
-                let bounds = self.nodes[node_index].bounds;
-
-                // TODO: add the three remaining squares
-                let nw = Square::new(
-                    self.nodes[node_index].bounds.min(),
-                    self.nodes[node_index].bounds.size() / 2.0,
-                );
-            }
-            // TODO: implement match arm for Internal
-            NodeType::Internal(_) => {}
-        }
-    }
-}
 
 //_______________________________________________________________
 
+/*
 struct Particles {
     num: usize,
     x: Vec<f32>,
@@ -252,13 +185,18 @@ impl Particles {
         }
     }
 }
+*/
 
 #[macroquad::main("Gravity Particle Sim")]
 async fn main() {
-    let mut particles = Particles::new(PARTICLE_COUNT);
+    let mut particles = create_particles(PARTICLE_COUNT);
+    let start = std::time::Instant::now();
+    let tree = Quadtree::create(&particles);
+    let end = std::time::Instant::now();
+    println!("Tree creation took: {:?}", end - start);
 
-    let mut view_off_x = 0.0;
-    let mut view_off_y = 0.0;
+    let mut view_off_x = screen_width();
+    let mut view_off_y = screen_height();
 
     let mut run = false;
 
@@ -272,7 +210,6 @@ async fn main() {
         if is_key_pressed(KeyCode::Enter) {
             view_off_x = 0.0;
             view_off_y = 0.0;
-            particles.restart();
         }
         if is_key_down(KeyCode::Up) {
             view_off_y += 5.0;
@@ -289,22 +226,19 @@ async fn main() {
 
         clear_background(BLACK);
 
-        // Draw Particles
-        let screen_width = screen_width();
-        let screen_height = screen_height();
-        for particle in 0..particles.x.len() {
-            // let radius = ((particles.m[particle] * 3.0) / (4.0 * PI)).cbrt();
+        // TODO: implement toggle for box drawing
+        tree.draw(view_off_x, view_off_y);
+
+        // TODO: render a pixel texture instead of drawing separate circles
+        particles.iter().for_each(|particle| {
             draw_circle(
-                particles.x[particle] + screen_width / 2.0 + view_off_x,
-                particles.y[particle] + screen_height / 2.0 + view_off_y,
+                particle.position.x as f32 + view_off_x,
+                particle.position.y as f32 + view_off_y,
                 1.0,
                 WHITE,
             );
-        }
+        });
 
-        if run {
-            particles.update();
-        }
         draw_fps();
         next_frame().await
     }
