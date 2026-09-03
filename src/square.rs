@@ -9,7 +9,6 @@ pub struct Square {
 }
 
 impl Square {
-    // TODO: better new functions
     pub fn new(start: Vec2, size: f64) -> Self {
         let end = Vec2::new(start.x + size, start.y + size);
         Square {
@@ -61,5 +60,16 @@ impl Square {
             max: Vec2::new(mid_x + max_length / 2.0, mid_y + max_length / 2.0),
             size: max_length,
         }
+    }
+
+    pub fn center(&self) -> Vec2 {
+        self.min + self.size / 2.0
+    }
+
+    pub fn contains(&self, point: Vec2) -> bool {
+        point.x >= self.min.x
+            && point.x <= self.max.x
+            && point.y >= self.min.y
+            && point.y <= self.max.y
     }
 }
